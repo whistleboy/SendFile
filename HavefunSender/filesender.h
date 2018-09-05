@@ -9,6 +9,7 @@
 #include <QDialog>
 #include <QLineEdit>
 #include <QMap>
+#include <QStringList>
 
 namespace Ui {
 class FileSender;
@@ -44,6 +45,7 @@ private:
     qint64 sendByteToWrite;
     qint64 sendTotalSize;
     int sendTimes;
+    QStringList sendFileNames;
 
     //sender | reciever params
     QString sendUserIp;
@@ -52,6 +54,9 @@ private:
     // dialog
     QDialog* chooseUserDialog;
     QLineEdit* edit_user_ip;
+
+    // init the widget before second connected
+    void initMyWidget();
 
 private slots:
     // reciever slots declare

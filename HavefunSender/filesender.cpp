@@ -47,6 +47,11 @@ void FileSender::readClient() {
         QDataStream in(recievedSocket);
         in >> recievedTotalSize >> recievedByteRecieved >> recievedFileName;
         recievedFileName = recievedFilePath + "/" + recievedFileName;
+        while (QFileInfo::exists(recievedFileName)) {
+            QString rightFileName = recievedFileName.right(recievedFileName.size() - recievedFileName.lastIndexOf('.'));
+            QString leftFileName = recievedFileName.left(recievedFileName.lastIndexOf("."));
+            recievedFileName = leftFileName + "[repeat]" + rightFileName;
+        }
         recievedNewFile = new QFile(recievedFileName);
         if (false ==  recievedNewFile->open(QFile::WriteOnly)) {
             qDebug() << "open file failed!!!";
@@ -84,6 +89,9 @@ void FileSender::readClient() {
 
 // sender
 void FileSender::send(){
+
+    ui->label_add_send_file->setText(tr("file is sending %1").arg(sendFileName));
+
     // init file size
     sendByteToWrite = sendLocalFile->size();
     sendTotalSize = sendLocalFile->size();
@@ -109,14 +117,18 @@ void FileSender::send(){
     ui->process_send->setMaximum(sendTotalSize);
     ui->process_send->setValue(sendTotalSize - sendByteToWrite);
 }
+
 void FileSender::goOnSend(qint64 numBytes) {
     sendByteToWrite -= numBytes;
     sendOutBlock = sendLocalFile->read(qMin(sendLoadSize, sendByteToWrite));
     sendTcpClient->write(sendOutBlock);
     ui->process_send->setMaximum(sendTotalSize);
     ui->process_send->setValue(sendTotalSize - sendByteToWrite);
-    if (sendByteToWrite == 0)
+    if (sendByteToWrite == 0) {
         ui->label_add_send_file->setText("file completed!");
+        ui->process_send->setValue(0);
+    }
+
 }
 
 void FileSender::addUserIp() {
@@ -141,6 +153,10 @@ void FileSender::addUserIp() {
     ui->list_send_user->setModel(userModel);
 }
 
+void FileSender::initMyWidget() {
+    ui->label_add_send_file->setText(tr("Choose Send File[s]"));
+}
+
 FileSender::~FileSender()
 {
     delete ui;
@@ -157,7 +173,14 @@ void FileSender::on_btn_add_send_file_clicked()
     sendTotalSize = 0;
     sendOutBlock.clear();
     // open files
-    sendFileName = QFileDialog::getOpenFileName(this);
+//    sendFileName = QFileDialog::getOpenFileName(this);
+    sendFileNames = QFileDialog::getOpenFileNames(this);
+
+    foreach (QString tmpFileName, sendFileNames) {
+        sendFileName = tmpFileName;
+        break;
+    }
+
     sendLocalFile = new QFile(sendFileName);
     sendLocalFile->open(QFile::ReadOnly);
     ui->label_add_send_file->setText(tr("opened file:"));
@@ -165,7 +188,10 @@ void FileSender::on_btn_add_send_file_clicked()
     // init list_view_files
     QStringListModel *sendModel;
     QStringList fileName_list2;
-    fileName_list2.push_back(sendFileName);
+    foreach (QString tmpFileName2, sendFileNames) {
+        fileName_list2.push_back(tmpFileName2);
+    }
+//    fileName_list2.push_back(sendFileName);
     sendModel = new QStringListModel(this);
     sendModel->setStringList(fileName_list2);
     ui->list_add_send_file->setModel(sendModel);
@@ -191,7 +217,8 @@ void FileSender::on_btn_send_to_user_clicked()
     } else {
         send();
     }
-    ui->label_add_send_file->setText(tr("file is sending %1").arg(sendFileName));
+    // the code move to send()
+//    ui->label_add_send_file->setText(tr("file is sending %1").arg(sendFileName));
 }
 
 void FileSender::on_btn_recv_save_file_clicked()
